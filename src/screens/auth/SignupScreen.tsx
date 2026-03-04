@@ -5,9 +5,11 @@ import { AuthStackParamList } from '../../navigation/types';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { useAppDispatch } from '../../store/hooks';
-import { authSuccess, startAuthLoading } from '../../store/slices/authSlice';
+import { authFailure, authSuccess, startAuthLoading } from '../../store/slices/authSlice';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { themeColors } from '../../theme/colors';
+import { authService } from '../../services/authService';
+import { setAuthToken } from '../../services/apiClient';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
@@ -26,10 +28,32 @@ export default function SignupScreen({ navigation }: Props) {
     }
     setError(null);
     setLoading(true);
-    dispatch(startAuthLoading());
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setLoading(false);
-    dispatch(authSuccess());
+    try {
+      dispatch(startAuthLoading());
+      await authService.signup({
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+      const loginResponse = await authService.login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+      const token = loginResponse.data?.token as string | undefined;
+      if (!token) {
+        setError('Signup succeeded, but login token was not returned');
+        dispatch(authFailure('Missing token'));
+        return;
+      }
+      setAuthToken(token);
+      dispatch(authSuccess(token));
+    } catch (signupError) {
+      const message = typeof signupError === 'string' ? signupError : 'Signup failed';
+      setError(message);
+      dispatch(authFailure(message));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

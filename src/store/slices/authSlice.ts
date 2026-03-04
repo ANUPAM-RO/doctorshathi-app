@@ -5,6 +5,7 @@ type AuthState = {
   checkingSession: boolean;
   loading: boolean;
   error: string | null;
+  token: string | null;
 };
 
 const initialState: AuthState = {
@@ -12,6 +13,7 @@ const initialState: AuthState = {
   checkingSession: false,
   loading: false,
   error: null,
+  token: null,
 };
 
 const authSlice = createSlice({
@@ -22,10 +24,13 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    authSuccess: (state) => {
+    authSuccess: (state, action: PayloadAction<string | undefined>) => {
       state.loading = false;
       state.isAuthenticated = true;
       state.error = null;
+      if (action.payload) {
+        state.token = action.payload;
+      }
     },
     authFailure: (state, action: PayloadAction<string>) => {
       state.loading = false;
@@ -34,6 +39,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.isAuthenticated = false;
       state.error = null;
+      state.token = null;
     },
     clearAuthError: (state) => {
       state.error = null;

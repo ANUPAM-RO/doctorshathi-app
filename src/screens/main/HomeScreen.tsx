@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
@@ -9,6 +9,7 @@ import EmptyState from '../../components/EmptyState';
 import { addToCart } from '../../store/slices/cartSlice';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { themeColors } from '../../theme/colors';
+import { fetchMedicines } from '../../store/slices/productsSlice';
 
 const banners = [
   'https://images.unsplash.com/photo-1471864190281-a93a3070b6de',
@@ -19,7 +20,7 @@ const banners = [
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useAppDispatch();
-  const { medicines } = useAppSelector((state) => state.products);
+  const { medicines, loading, error } = useAppSelector((state) => state.products);
   const [query, setQuery] = useState('');
   const isDark = useColorScheme() === 'dark';
   const colors = isDark ? themeColors.dark : themeColors.light;
@@ -28,6 +29,10 @@ export default function HomeScreen() {
     () => medicines.filter((m) => m.name.toLowerCase().includes(query.toLowerCase()) || m.category.toLowerCase().includes(query.toLowerCase())),
     [medicines, query]
   );
+
+  useEffect(() => {
+    dispatch(fetchMedicines());
+  }, [dispatch]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -67,7 +72,18 @@ export default function HomeScreen() {
             onAdd={() => dispatch(addToCart(item))}
           />
         )}
-        ListEmptyComponent={<EmptyState title="No medicines found" subtitle="Try a different keyword." />}
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ color: colors.muted, marginTop: 8 }}>Loading medicines...</Text>
+            </View>
+          ) : error ? (
+            <EmptyState title="Could not load medicines" subtitle={error} />
+          ) : (
+            <EmptyState title="No medicines found" subtitle="Try a different keyword." />
+          )
+        }
       />
     </View>
   );
@@ -81,4 +97,5 @@ const styles = StyleSheet.create({
   banner: { width: 320, height: 140, marginRight: 10, borderRadius: 14 },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   chip: { borderWidth: 1, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8 },
+  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
 });

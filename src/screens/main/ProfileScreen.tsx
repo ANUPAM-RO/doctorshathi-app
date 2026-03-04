@@ -7,6 +7,7 @@ import { updateProfile } from '../../store/slices/profileSlice';
 import { logout } from '../../store/slices/authSlice';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { themeColors } from '../../theme/colors';
+import { setAuthToken } from '../../services/apiClient';
 
 export default function ProfileScreen() {
   const dispatch = useAppDispatch();
@@ -19,6 +20,11 @@ export default function ProfileScreen() {
   const save = () => {
     dispatch(updateProfile(form));
     setEditing(false);
+  };
+
+  const onLogout = () => {
+    setAuthToken(null);
+    dispatch(logout());
   };
 
   return (
@@ -34,7 +40,7 @@ export default function ProfileScreen() {
       ) : (
         <Button title="Save Changes" onPress={save} />
       )}
-      <Button title="Logout" onPress={() => dispatch(logout())} variant="outline" />
+      <Button title="Logout" onPress={onLogout} variant="outline" />
     </View>
   );
 }

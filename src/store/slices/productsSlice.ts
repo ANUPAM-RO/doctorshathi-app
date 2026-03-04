@@ -1,14 +1,55 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Medicine } from '../../types';
+import { medicineService } from '../../services/medicineService';
 
 type ProductsState = {
   medicines: Medicine[];
   featured: string[];
   loading: boolean;
+  error: string | null;
 };
+
+type BackendMedicine = {
+  _id: string;
+  name: string;
+  price?: number;
+  description?: string;
+  stock?: number;
+  imageUrl?: string;
+  images?: string[];
+  category?: string;
+  prescriptionRequired?: boolean;
+};
+
+const fallbackImage = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae';
+
+const mapBackendMedicine = (item: BackendMedicine): Medicine => ({
+  id: item._id,
+  name: item.name,
+  price: Number(item.price ?? 0),
+  description: item.description || '',
+  stock: Number(item.stock ?? 0),
+  image: item.imageUrl || item.images?.[0] || fallbackImage,
+  category: item.category || 'General',
+  requiresPrescription: Boolean(item.prescriptionRequired),
+});
+
+export const fetchMedicines = createAsyncThunk<Medicine[], void, { rejectValue: string }>(
+  'products/fetchMedicines',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await medicineService.list();
+      const data = Array.isArray(response.data) ? (response.data as BackendMedicine[]) : [];
+      return data.map(mapBackendMedicine);
+    } catch (error) {
+      return rejectWithValue(typeof error === 'string' ? error : 'Failed to load medicines');
+    }
+  }
+);
 
 const initialState: ProductsState = {
   loading: false,
+  error: null,
   featured: ['1', '2', '4'],
   medicines: [
     {
@@ -59,6 +100,22 @@ const productsSlice = createSlice({
     setMedicines: (state, action: PayloadAction<Medicine[]>) => {
       state.medicines = action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchMedicines.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchMedicines.fulfilled, (state, action) => {
+        state.loading = false;
+        state.medicines = action.payload;
+        state.featured = action.payload.slice(0, 3).map((medicine) => medicine.id);
+      })
+      .addCase(fetchMedicines.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? 'Failed to load medicines';
+      });
   },
 });
 

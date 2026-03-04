@@ -8,6 +8,8 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { themeColors } from '../../theme/colors';
+import { authService } from '../../services/authService';
+import { setAuthToken } from '../../services/apiClient';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -36,10 +38,19 @@ export default function LoginScreen({ navigation }: Props) {
     if (!validate()) return;
     try {
       dispatch(startAuthLoading());
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      dispatch(authSuccess());
-    } catch {
-      dispatch(authFailure('Invalid email or password'));
+      const response = await authService.login({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      const token = response.data?.token as string | undefined;
+      if (!token) {
+        dispatch(authFailure('Login failed: token not returned'));
+        return;
+      }
+      setAuthToken(token);
+      dispatch(authSuccess(token));
+    } catch (error) {
+      dispatch(authFailure(typeof error === 'string' ? error : 'Invalid email or password'));
     }
   };
 
